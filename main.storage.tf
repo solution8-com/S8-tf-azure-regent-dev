@@ -1,3 +1,7 @@
+# Storage Account for n8n persistence
+# Provides Azure Files share for n8n SQLite database and workflow state storage
+# LRS (Locally Redundant Storage) is sufficient for development environments
+# Data remains within North Europe region
 module "storage" {
   source  = "Azure/avm-res-storage-storageaccount/azurerm"
   version = "0.5.0"
@@ -15,8 +19,11 @@ module "storage" {
   public_network_access_enabled = true
   tags                          = var.tags
 
+  # No VNet integration per requirements - simplified networking
   network_rules = null
 
+  # Azure Files share for n8n SQLite database and workflow persistence
+  # 2GB quota is sufficient for development workloads
   shares = {
     n8nconfig = {
       name        = "n8nconfig"

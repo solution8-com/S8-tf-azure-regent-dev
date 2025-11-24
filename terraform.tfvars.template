@@ -1,0 +1,37 @@
+# Terraform variables template
+# Copy this file to terraform.tfvars and fill in your actual values
+# NEVER commit terraform.tfvars to Git - it contains secrets!
+
+# Azure subscription ID
+subscription_id = "your-azure-subscription-id"
+
+# PostgreSQL admin password - must be strong
+postgres_admin_password = "YourSecurePassword123!"
+
+# External OpenAI-compatible endpoint (in separate tenant)
+external_openai_endpoint        = "https://your-openai.openai.azure.com/"
+external_openai_api_key         = "your-openai-api-key"
+external_openai_deployment_name = "gpt-4"
+
+# Cohere Rerank API key (if not using managed deployment)
+cohere_rerank_api_key = "your-cohere-api-key-or-empty"
+
+# Authentication: Choose IP whitelisting OR Entra ID
+# Option 1: IP whitelisting
+allowed_ip_ranges = ["1.2.3.4/32"]  # Your IP address in CIDR notation
+
+# Option 2: Entra ID (requires additional configuration)
+# enable_entra_auth = true
+
+# Optional: Override default location (North Europe)
+# location = "northeurope"
+
+# Optional: Custom tags
+tags = {
+  Environment = "Development"
+  Project     = "Haystack-n8n"
+  Owner       = "YourName"
+}
+
+# Optional: Enable telemetry
+# enable_telemetry = false
