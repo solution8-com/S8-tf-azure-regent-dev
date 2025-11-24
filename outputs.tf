@@ -1,35 +1,47 @@
+# Outputs for accessing deployed services and retrieving connection information
+
+# n8n endpoint URL
 output "n8n_fqdn_url" {
-  description = "https url that contains ingress's fqdn, could be used to access the n8n app."
+  description = "HTTPS URL for accessing the n8n workflow automation interface"
   value       = module.container_app_n8n.fqdn_url
 }
 
-output "mcp_endpoint_sse" {
-  description = "The sse endpoint of the MCP Server"
-  value = try("${module.container_app_mcp[0].fqdn_url}/sse", null)
+# Haystack endpoint URL
+output "haystack_fqdn_url" {
+  description = "HTTPS URL for accessing the Haystack REST API"
+  value       = module.container_app_haystack.fqdn_url
 }
 
-output "openai_key_secret_url" {
-  description = "https url that contains the openai key secret in the key vault."
-  value       = module.key_vault.secrets["openai-key"].versionless_id
+# PostgreSQL connection information
+output "postgresql_fqdn" {
+  description = "FQDN of the PostgreSQL Flexible Server for Haystack DocumentStore"
+  value       = module.postgresql.fqdn
 }
 
-output "openai_endpoint" {
-  description = "The endpoint of the OpenAI deployment."
-  value       = module.openai.endpoint
+output "postgresql_database" {
+  description = "Database name for Haystack DocumentStore"
+  value       = "haystack"
 }
 
-output "openai_resource_name" {
-  description = "The name of the OpenAI deployment."
-  value       = module.openai.resource.custom_subdomain_name
+# Cohere Rerank configuration
+output "cohere_rerank_endpoint" {
+  description = "Azure AI Foundry endpoint for Cohere Rerank v3.5"
+  value       = azurerm_cognitive_account.ai_hub.endpoint
 }
 
-output "openai_deployment_name" {
-  description = "The name of the OpenAI deployment."
-  value       = module.openai.resource_cognitive_deployment["gpt-4o-mini"].name
+# Key Vault information for secret access
+output "key_vault_uri" {
+  description = "URI of the Key Vault containing all secrets"
+  value       = module.key_vault.resource_id
 }
 
-output "openai_api_version" {
-  description = "The version of the OpenAI API to n8n credential. See https://learn.microsoft.com/en-us/azure/ai-services/openai/api-version-deprecation"
-  value       = "2025-03-01-preview"
+# Resource Group
+output "resource_group_name" {
+  description = "Name of the resource group containing all infrastructure"
+  value       = azurerm_resource_group.this.name
 }
 
+output "resource_group_location" {
+  description = "Location of the resource group (should be North Europe)"
+  value       = azurerm_resource_group.this.location
+}

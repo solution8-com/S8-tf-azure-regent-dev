@@ -1,0 +1,13 @@
+# Backend configuration for Terraform remote state
+# Copy this file to backend.hcl and fill in your values
+# Never commit backend.hcl to Git if it contains sensitive information
+
+resource_group_name  = "tfstate-rg"
+storage_account_name = "yourtfstatestorage"  # Must be globally unique
+container_name       = "tfstate"
+key                  = "dev.terraform.tfstate"
+
+# Optional: Uncomment and configure for authentication
+# use_azuread_auth     = true
+# subscription_id      = "your-subscription-id"
+# tenant_id            = "your-tenant-id"
