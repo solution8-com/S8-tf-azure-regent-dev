@@ -5,20 +5,13 @@ This Terraform configuration deploys a minimal, development-focused Azure infras
 - **Haystack**: Full-featured document search and LLM orchestration service
 - **n8n**: Workflow automation platform
 - **PostgreSQL**: Backend database with Full Text Search (FTS) for Haystack
-- **Azure AI Foundry**: Cohere Rerank v3.5 deployment for document reranking
+- **Azure AI Foundry**: Cohere Rerank v3.5 hosted inside the Global Evolution tenant, plus connectivity to an external OpenAI-compatible LLM endpoint
 
 ## ⚠️ Important Notes
 
-### Cohere Rerank v3.5 Deployment Limitation
+### Cohere Rerank v3.5 Deployment
 
-As of December 2024, Cohere models in Azure may not be directly deployable via Terraform's `azurerm` provider. The current implementation creates an Azure Cognitive Services account (OpenAI kind) as the foundation, but **the actual Cohere Rerank v3.5 model deployment may require manual configuration through Azure AI Studio**.
-
-URL to Azure AI Studio Model Card: https://ai.azure.com/explore/models/Cohere-rerank-v3.5/version/1/registry/azureml-cohere?tid=9de3d9c3-b0bb-4d2e-93ab-f6407a8b3793
-
-**Alternatives**:
-1. Deploy Cohere Rerank v3.5 manually via Azure AI Studio (documented below)
-
-This limitation is documented to maintain transparency. Terraform provider updates may enable fully automated Cohere deployments.
+This stack provisions an Azure Cognitive Services (Azure AI Foundry) account dedicated to Cohere Rerank v3.5. As of November 2025, the Terraform provider cannot deploy the Cohere model directly, so a short Azure AI Studio workflow is required post-provisioning. Detailed steps are provided later in this document. All Cohere usage remains within the Global Evolution tenant, satisfying the policy requirements.
 
 ## Architecture Overview
 
@@ -62,10 +55,10 @@ This limitation is documented to maintain transparency. Terraform provider updat
    - Mounted at `/home/node/.n8n` in n8n container
    - Ensures workflow state survives container restarts
 
-7. **Azure AI Foundry Hub**
-   - Cohere Rerank v3.5 deployment
-   - Endpoint and API key exposed to Haystack via environment variables
-   - Used by Haystack for reranking retrieved documents
+7. **Azure AI Foundry Cohere Rerank**
+   - Cognitive Services account (OpenAI kind) dedicated to Cohere models
+   - Endpoint exposed via module outputs
+   - Access key stored in Key Vault and injected into Haystack
 
 8. **Key Vault**
    - Secure storage for:
@@ -180,26 +173,20 @@ key                  = "dev.terraform.tfstate"
      --querytext "@schema.sql"
    ```
 
-5. **Deploy Cohere Rerank v3.5**:
+5. **Deploy Cohere Rerank v3.5 in Azure AI Studio**:
    
-   If Terraform doesn't automatically deploy the Cohere model, you can deploy it manually:
+   a. Navigate to [Azure AI Studio](https://ai.azure.com/).
    
-   a. Navigate to [Azure AI Studio](https://ai.azure.com/)
+   b. Select the Cognitive Services account created by Terraform (see `cohere_rerank_endpoint` output).
    
-   b. Select the Cognitive Services resource created by Terraform
+   c. Open **Model catalog** → search for **Cohere Rerank v3.5** (latest version).
    
-   c. Navigate to "Model deployments" or "Models"
+   d. Create a new deployment with:
+      - Deployment name: `cohere-rerank-v3`
+      - Model version: latest available
+      - Region: North Europe (or closest EU region supported)
    
-   d. Search for "Cohere Rerank v3.5" or follow the [link to the model card](https://ai.azure.com/explore/models/Cohere-rerank-v3.5/version/1/registry/azureml-cohere?tid=9de3d9c3-b0bb-4d2e-93ab-f6407a8b3793) 
-   
-   e. Deploy the model with the following settings:
-      - Deployment name: `cohere-rerank-v3.5`
-      - Model version: Latest available
-      - Region: North Europe (or closest EU region)
-   
-   f. Copy the endpoint URL and credentials
-   
-   g. Update Key Vault secret
+   e. After deployment, the endpoint and key remain the same values already wired into Key Vault. No Terraform changes are required.
 
 
 6. **Access the services**:
@@ -236,7 +223,7 @@ Set `enable_entra_auth = true` to require Entra ID login.
 
 - **Primary Region**: North Europe
 - **Data Residency**: All data persists within EU regions
-- **Cohere Rerank**: Deployed in North Europe if available, otherwise closest EU region
+- **Cohere Rerank Deployment**: Azure AI Foundry account hosted in North Europe (or nearest EU region if unavailable)
 - **OpenAI Endpoint**: External endpoint in separate tenant (region not controlled by this deployment)
 
 ## Prohibited Components
@@ -252,13 +239,13 @@ The following are explicitly excluded per architecture requirements:
 
 ## Cohere Rerank v3.5 Integration
 
-Haystack uses Cohere Rerank v3.5 deployed in Azure AI Foundry:
+Haystack uses the Azure AI Foundry account created by this stack:
 
-1. **Deployment**: Cohere model deployed via Azure Cognitive Services
-2. **Endpoint**: Exposed via `azurerm_cognitive_account.ai_hub.endpoint`
-3. **Authentication**: API key stored in Key Vault, accessed by Haystack
-4. **Usage**: Haystack reranker component calls endpoint with retrieved documents
-5. **Output**: Reranked documents with semantic relevance scores
+1. **Provisioning**: Terraform creates an Azure Cognitive Services (OpenAI kind) account for Cohere workloads.
+2. **Deployment**: After Terraform applies, deploy Cohere Rerank v3.5 through Azure AI Studio (steps below).
+3. **Endpoint**: The Cognitive Services endpoint is output as `cohere_rerank_endpoint`.
+4. **Authentication**: The primary access key is stored in Key Vault and mounted into Haystack as `COHERE_API_KEY`.
+5. **Usage**: Haystack calls the internal endpoint with retrieved documents for reranking.
 
 ## External OpenAI-Compatible Endpoint
 
@@ -299,8 +286,8 @@ Expected resource count:
 - 1 PostgreSQL Flexible Server
 - 1 Storage Account + 1 File Share
 - 1 Key Vault
-- 1 AI Foundry Hub (Cognitive Account)
-- 1 Cohere Rerank deployment
+- 1 User Assigned Managed Identity
+- 1 Azure Cognitive Services account (Cohere Rerank)
 
 ## Maintenance
 
@@ -333,7 +320,7 @@ Container apps use minimal resources (0.25-0.5 CPU, 0.5-1.0 GB RAM). To scale:
 1. **Manual Schema Initialization**: PostgreSQL schema must be created manually after first apply
 2. **No VNet Integration**: Simplified networking means public endpoints with authentication
 3. **Development-Focused**: Minimal SKUs and single-instance deployments
-4. **Cohere Model Availability**: May require manual deployment via Azure AI Studio if Terraform provider doesn't support
+4. **Cohere Model Availability**: Requires Azure AI Studio deployment (Terraform cannot yet create the model)
 5. **Entra ID Authentication**: Requires manual Azure AD app registration for full implementation
 
 ## Troubleshooting
@@ -377,7 +364,7 @@ Estimated monthly cost (North Europe, development SKUs):
 - PostgreSQL B_Standard_B1ms: ~$25
 - Storage Account (LRS): ~$2
 - Key Vault: ~$1
-- AI Foundry + Cohere: Variable (depends on usage)
+- Azure Cognitive Services (Cohere): Variable (usage-based)
 
 **Total**: ~$120-150/month
 

@@ -29,7 +29,7 @@ module "key_vault" {
   # Secret values - sourced from variables or generated passwords
   secrets_value = {
     postgres-password   = var.postgres_admin_password != "" ? var.postgres_admin_password : random_password.postgres_admin_password.result
-    cohere-api-key      = var.cohere_rerank_api_key
+    cohere-api-key      = azurerm_cognitive_account.cohere.primary_access_key
     external-openai-key = var.external_openai_api_key
   }
 

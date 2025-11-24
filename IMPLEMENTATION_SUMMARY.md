@@ -45,11 +45,10 @@ This implementation provides a **minimal, development-focused Azure infrastructu
    - Mounted to n8n container
    - SQLite persistence
 
-7. **Azure Cognitive Services (AI Foundry Hub)**
-   - OpenAI kind account
-   - Foundation for Cohere Rerank
-   - System-assigned identity
-   - North Europe region
+7. **Azure AI Foundry Cohere Account**
+   - Azure Cognitive Services (OpenAI kind) created by Terraform
+   - Hosts Cohere Rerank v3.5 deployment via Azure AI Studio
+   - Endpoint exposed through Terraform outputs
 
 8. **Key Vault**
    - Postgres password
@@ -72,7 +71,7 @@ PostgreSQL FTS Retrieval
 Initial Candidates (e.g., top 100)
     ↓
 Cohere Rerank v3.5
-(via Azure AI Foundry)
+(Azure AI Foundry endpoint)
     ↓
 Top-k Reranked Results (e.g., top 10)
     ↓
@@ -118,16 +117,15 @@ Custom automation logic
 - GIN indexing for performance
 - No external dependencies (e.g., Elasticsearch, Milvus)
 
-### 3. Cohere Deployment: Cognitive Services + Manual Step
+### 3. Cohere Deployment: Azure AI Foundry Integration
 
-**Decision**: Create Cognitive Services account, document manual deployment if needed
+**Decision**: Provision an Azure Cognitive Services account and complete model deployment via Azure AI Studio
 
 **Rationale**:
-- Terraform provider may not support Cohere models directly
-- Creating foundation (Cognitive Services account)
-- Documented manual steps for Azure AI Studio deployment
-- Alternative: Use Cohere cloud API directly
-- Maintains "no manual steps" goal with documented workaround
+- Meets policy requirement to keep Cohere workloads inside the tenant
+- Terraform handles account creation and key distribution
+- Azure AI Studio deployment fills the current provider gap for Cohere models
+- Keeps reranker endpoint/credential management centralized in Azure
 
 ### 4. OpenAI Endpoint: External Configuration
 
@@ -200,11 +198,10 @@ Custom automation logic
 Must be provided at runtime:
 
 ```hcl
-subscription_id              # Azure subscription
-postgres_admin_password      # PostgreSQL password (or auto-generated)
-external_openai_endpoint     # External LLM endpoint
-external_openai_api_key      # External LLM API key
-cohere_rerank_api_key        # Cohere API key
+ subscription_id              # Azure subscription
+ postgres_admin_password      # PostgreSQL password (or auto-generated)
+ external_openai_endpoint     # External LLM endpoint (separate tenant)
+ external_openai_api_key      # External LLM API key
 ```
 
 ### Optional Variables
@@ -228,15 +225,15 @@ enable_telemetry             # AVM telemetry
 4. **terraform.tfvars.template**: Variable template
 5. **backend.hcl.template**: Backend configuration template
 6. **provider.tf**: Updated provider versions and backend
-7. **variables.tf**: Added required variables
+7. **variables.tf**: Secrets and configuration variables
 8. **main.aca.tf**: Completely rewritten for n8n (SQLite) + Haystack
 9. **main.postgresql.tf**: Updated for Haystack FTS
 10. **main.kv.tf**: Updated secrets configuration
-11. **main.ai_foundry.tf**: New file for Cohere deployment
-12. **main.storage.tf**: Updated comments
-13. **main.tf**: Enhanced comments
-14. **outputs.tf**: Updated outputs
-15. **main.openai.tf**: DELETED (replaced by external endpoint)
+11. **main.storage.tf**: Updated comments
+12. **main.tf**: Enhanced comments
+13. **outputs.tf**: Updated outputs
+14. **main.openai.tf**: DELETED (replaced by Azure AI Foundry account)
+15. **main.ai_foundry.tf**: NEW Azure Cognitive Services account for Cohere
 
 ## Known Limitations
 
@@ -244,10 +241,10 @@ enable_telemetry             # AVM telemetry
    - SQL script provided
    - Can be automated via container init (not implemented)
 
-2. **Cohere Deployment**: May require Azure AI Studio
-   - Terraform provider limitation
-   - Manual steps documented
-   - Alternative: Cohere cloud API
+2. **Cohere Deployment**: Requires Azure AI Studio workflow
+   - Terraform creates the Azure Cognitive Services account
+   - Model deployment must be triggered manually in Azure AI Studio
+   - Steps documented in README and Deployment Guide
 
 3. **Entra ID Authentication**: Requires external setup
    - Azure AD app registration needed
@@ -266,7 +263,7 @@ enable_telemetry             # AVM telemetry
 - Haystack Container App (FTS + Rerank + LLM)
 - PostgreSQL Flexible Server (FTS)
 - Storage Account + Azure Files
-- Azure AI Foundry Hub (Cohere foundation)
+- Azure AI Foundry Cohere Account (Cognitive Services)
 
 ### ✓ Prohibited Components (0 present)
 - No vector databases
@@ -304,7 +301,7 @@ Development deployment (North Europe):
 | PostgreSQL B_Standard_B1ms | $25 |
 | Storage Account (LRS) | $2 |
 | Key Vault | $1 |
-| Cognitive Services | Variable |
+| Azure Cognitive Services (Cohere) | Variable |
 | **Total (base)** | **~$120** |
 
 Plus Cohere API usage (variable based on reranking volume).
@@ -318,7 +315,7 @@ Plus Cohere API usage (variable based on reranking volume).
 5. Plan: `terraform plan -var-file=terraform.tfvars`
 6. Apply: `terraform apply -var-file=terraform.tfvars`
 7. Initialize PostgreSQL schema: `psql ... < schema.sql`
-8. (Optional) Deploy Cohere model via Azure AI Studio
+8. Deploy Cohere Rerank in Azure AI Studio (see README/guide)
 9. Access services via output URLs
 
 ## Testing
@@ -332,7 +329,6 @@ subscription_id = "00000000-0000-0000-0000-000000000000"
 postgres_admin_password = "TestPassword123!"
 external_openai_endpoint = "https://test.openai.azure.com/"
 external_openai_api_key = "test-key"
-cohere_rerank_api_key = "test-key"
 EOF
 
 # Validate

@@ -31,7 +31,7 @@ This document verifies that the Terraform configuration meets all requirements s
    - Image: `deepset/haystack:latest` (official Haystack image)
    - REST API: Enabled (port 8000)
    - DocumentStore: PostgreSQL with FTS
-   - Reranking: Cohere Rerank v3.5 via Azure Cognitive Services
+  - Reranking: Cohere Rerank v3.5 via Azure AI Foundry account created by Terraform
    - LLM: External OpenAI-compatible endpoint
    - Authentication: IP whitelisting support
 
@@ -52,18 +52,17 @@ This document verifies that the Terraform configuration meets all requirements s
    - Purpose: n8n SQLite database persistence
    - Replication: LRS (locally redundant)
 
-7. **Azure AI Foundry Hub** ✓
-   - File: `main.ai_foundry.tf`
-   - Resource: `azurerm_cognitive_account.ai_hub`
-   - Kind: OpenAI (Cognitive Services)
-   - Purpose: Cohere Rerank v3.5 deployment
-   - Note: Actual Cohere deployment may require Azure AI Studio (documented)
-
-8. **Key Vault** ✓
+7. **Key Vault** ✓
    - File: `main.kv.tf`
    - Module: `module.key_vault`
    - Secrets: postgres-password, cohere-api-key, external-openai-key
    - Access: Via managed identity RBAC
+
+8. **Azure AI Foundry Cohere Account** ✓
+   - File: `main.ai_foundry.tf`
+   - Resource: `azurerm_cognitive_account.cohere`
+   - Endpoint exposed via outputs
+   - Access key stored in Key Vault
 
 ### Prohibited Components ✓
 
@@ -140,7 +139,7 @@ When running `terraform plan`, expect the following resources:
 2. azurerm_user_assigned_identity.this
 3. azurerm_container_app_environment.this
 4. azurerm_container_app_environment_storage.this
-5. azurerm_cognitive_account.ai_hub
+5. azurerm_cognitive_account.cohere
 6. random_password.postgres_admin_password
 7. terraform_data.postgresql_init
 8. module.naming (multiple resources)
@@ -159,10 +158,10 @@ When running `terraform plan`, expect the following resources:
    - SQL script provided in `schema.sql`
    - Alternative: Container init script (not implemented)
 
-2. **Cohere Rerank v3.5 Deployment**: May require Azure AI Studio
-   - Terraform support limited as of Dec 2024
-   - Cognitive Account created, but model deployment may need manual step
-   - Alternative: Use Cohere cloud API directly (documented)
+2. **Cohere Rerank v3.5 Deployment**: Requires Azure AI Studio step
+   - Terraform creates the Cognitive Services account
+   - Model deployment must be triggered manually in Azure AI Studio
+   - Detailed workflow documented in README and Deployment Guide
 
 3. **Entra ID Authentication**: Requires external Azure AD app registration
    - Flag provided but not fully implemented
@@ -195,7 +194,7 @@ Approximate monthly cost in North Europe:
 - PostgreSQL B_Standard_B1ms: ~$25
 - Storage Account: ~$2
 - Key Vault: ~$1
-- Cognitive Services: Variable (usage-based)
+- Azure Cognitive Services (Cohere): Variable (depends on usage)
 
 **Total**: ~$120-150/month + Cohere usage
 

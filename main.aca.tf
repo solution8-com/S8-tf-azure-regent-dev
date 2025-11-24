@@ -204,7 +204,7 @@ module "container_app_haystack" {
           },
           {
             name  = "COHERE_API_ENDPOINT"
-            value = azurerm_cognitive_account.ai_hub.endpoint
+            value = azurerm_cognitive_account.cohere.endpoint
           },
           {
             name        = "COHERE_API_KEY"

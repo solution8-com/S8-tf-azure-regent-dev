@@ -70,9 +70,6 @@ external_openai_endpoint        = "https://your-openai.openai.azure.com/"
 external_openai_api_key         = "your-openai-api-key"
 external_openai_deployment_name = "gpt-4"  # or your model name
 
-# Cohere API key (cloud API or leave empty for Azure deployment)
-cohere_rerank_api_key = "your-cohere-api-key-or-empty"
-
 # IP whitelisting (your public IP)
 allowed_ip_ranges = ["YOUR_IP/32"]  # Get with: curl ifconfig.me
 
@@ -141,25 +138,29 @@ PGPASSWORD="$POSTGRES_PASSWORD" psql \
   -f schema.sql
 ```
 
-## Step 7: Deploy Cohere Model (if needed)
+## Step 7: Deploy Cohere Rerank in Azure AI Studio
 
-If using Azure AI Foundry for Cohere (not cloud API):
+Terraform provisions the Azure Cognitive Services account. Complete the model deployment in Azure AI Studio:
 
-1. Go to [Azure AI Studio](https://ai.azure.com/)
-2. Find the Cognitive Services resource created by Terraform
-3. Navigate to "Model deployments"
-4. Deploy "Cohere Rerank v3.5" with name: `cohere-rerank-v3`
-5. Copy the API key and update Key Vault secret if needed:
+1. Open [Azure AI Studio](https://ai.azure.com/).
+2. Select the Cognitive Services resource created by Terraform (see `cohere_rerank_endpoint` output).
+3. Navigate to **Model catalog**, search for **Cohere Rerank v3.5**, and select the latest version.
+4. Deploy the model with:
+   - Deployment name: `cohere-rerank-v3`
+   - Region: North Europe (or the closest supported EU region)
+5. The endpoint and primary key already feed into Key Vault and Haystack automatically.
+
+If you rotate keys later, refresh the Key Vault secret:
 
 ```bash
 # Get Key Vault name
 KV_NAME=$(terraform output -raw key_vault_uri | cut -d/ -f3 | cut -d. -f1)
 
-# Update Cohere API key in Key Vault
+# Update Cohere API key
 az keyvault secret set \
   --vault-name $KV_NAME \
   --name "cohere-api-key" \
-  --value "your-cohere-api-key-from-ai-studio"
+  --value "your-cohere-api-key"
 ```
 
 ## Step 8: Access Services
@@ -201,7 +202,7 @@ Expected resources:
 - 1 PostgreSQL Flexible Server
 - 1 Storage Account
 - 1 Key Vault
-- 1 Cognitive Services account
+- 1 Azure Cognitive Services account
 - Supporting resources (identities, storage configs, etc.)
 
 ## Troubleshooting

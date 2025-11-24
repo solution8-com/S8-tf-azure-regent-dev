@@ -46,16 +46,6 @@ Example: terraform apply -var="postgres_admin_password=SecurePassword123!"
 DESCRIPTION
 }
 
-variable "cohere_rerank_api_key" {
-  type        = string
-  sensitive   = true
-  default     = ""
-  description = <<DESCRIPTION
-API key for Cohere Rerank v3.5 service in Azure AI Foundry.
-Will be automatically generated if using managed deployment.
-DESCRIPTION
-}
-
 variable "external_openai_endpoint" {
   type        = string
   default     = "https://placeholder.openai.azure.com/"

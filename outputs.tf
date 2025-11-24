@@ -25,8 +25,8 @@ output "postgresql_database" {
 
 # Cohere Rerank configuration
 output "cohere_rerank_endpoint" {
-  description = "Azure AI Foundry endpoint for Cohere Rerank v3.5"
-  value       = azurerm_cognitive_account.ai_hub.endpoint
+  description = "Endpoint for the Azure AI Foundry Cohere Rerank deployment"
+  value       = azurerm_cognitive_account.cohere.endpoint
 }
 
 # Key Vault information for secret access

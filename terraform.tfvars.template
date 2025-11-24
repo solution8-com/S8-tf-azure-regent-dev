@@ -13,8 +13,7 @@ external_openai_endpoint        = "https://your-openai.openai.azure.com/"
 external_openai_api_key         = "your-openai-api-key"
 external_openai_deployment_name = "gpt-4"
 
-# Cohere Rerank API key (if not using managed deployment)
-cohere_rerank_api_key = "your-cohere-api-key-or-empty"
+# Cohere Rerank keys are populated automatically from the Azure AI Foundry account created by Terraform.
 
 # Authentication: Choose IP whitelisting OR Entra ID
 # Option 1: IP whitelisting
