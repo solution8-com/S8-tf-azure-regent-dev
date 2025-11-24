@@ -7,6 +7,19 @@ This Terraform configuration deploys a minimal, development-focused Azure infras
 - **PostgreSQL**: Backend database with Full Text Search (FTS) for Haystack
 - **Azure AI Foundry**: Cohere Rerank v3.5 deployment for document reranking
 
+## ⚠️ Important Notes
+
+### Cohere Rerank v3.5 Deployment Limitation
+
+As of December 2024, Cohere models in Azure may not be directly deployable via Terraform's `azurerm` provider. The current implementation creates an Azure Cognitive Services account (OpenAI kind) as the foundation, but **the actual Cohere Rerank v3.5 model deployment may require manual configuration through Azure AI Studio**.
+
+**Alternatives**:
+1. Deploy Cohere Rerank v3.5 manually via Azure AI Studio (documented below)
+2. Use Cohere's cloud API directly (provide API key via `cohere_rerank_api_key` variable)
+3. Use Azure OpenAI with an alternative reranking approach (if Cohere is unavailable)
+
+This limitation is documented to maintain transparency. Future Terraform provider updates may enable fully automated Cohere deployments.
+
 ## Architecture Overview
 
 ### Components
@@ -201,7 +214,30 @@ key                  = "dev.terraform.tfstate"
      --querytext "@schema.sql"
    ```
 
-5. **Access the services**:
+5. **Deploy Cohere Rerank v3.5** (optional manual step if not using Cohere cloud API):
+   
+   If Terraform doesn't automatically deploy the Cohere model, you can deploy it manually:
+   
+   a. Navigate to [Azure AI Studio](https://ai.azure.com/)
+   
+   b. Select the Cognitive Services resource created by Terraform
+   
+   c. Navigate to "Model deployments" or "Models"
+   
+   d. Search for "Cohere Rerank v3.5" or "Cohere Rerank"
+   
+   e. Deploy the model with the following settings:
+      - Deployment name: `cohere-rerank-v3`
+      - Model version: Latest available
+      - Region: North Europe (or closest EU region)
+   
+   f. Copy the endpoint URL and API key
+   
+   g. Update the `cohere_rerank_api_key` variable or Key Vault secret
+   
+   **Alternative**: Use Cohere's cloud API by providing your Cohere API key in the `cohere_rerank_api_key` variable.
+
+6. **Access the services**:
    - n8n: `terraform output -raw n8n_fqdn_url`
    - Haystack: `terraform output -raw haystack_fqdn_url`
 

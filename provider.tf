@@ -5,15 +5,18 @@ terraform {
   required_version = ">= 1.8, < 2.0"
 
   # Remote state stored in Azure Blob Storage
-  # The backend configuration must be provided at init time or via a backend config file
-  # Example: terraform init -backend-config="backend.hcl"
-  # Uncomment and configure before deploying to production
-  # backend "azurerm" {
-  #   resource_group_name  = "tfstate-rg"
-  #   storage_account_name = "tfstatestorage"
-  #   container_name       = "tfstate"
-  #   key                  = "dev.terraform.tfstate"
-  # }
+  # These placeholder values MUST be updated before running terraform init
+  # Either:
+  # 1. Update the values below directly, or
+  # 2. Use: terraform init -backend-config=backend.hcl
+  # 3. Use partial configuration with environment variables
+  # See backend.hcl.template for configuration template
+  backend "azurerm" {
+    resource_group_name  = "tfstate-rg"     # CHANGE ME
+    storage_account_name = "tfstatestorage" # CHANGE ME (must be globally unique)
+    container_name       = "tfstate"
+    key                  = "dev.terraform.tfstate"
+  }
 
   required_providers {
     # Azure Resource Manager provider - pessimistically pinned to major version 4
