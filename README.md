@@ -13,12 +13,12 @@ This Terraform configuration deploys a minimal, development-focused Azure infras
 
 As of December 2024, Cohere models in Azure may not be directly deployable via Terraform's `azurerm` provider. The current implementation creates an Azure Cognitive Services account (OpenAI kind) as the foundation, but **the actual Cohere Rerank v3.5 model deployment may require manual configuration through Azure AI Studio**.
 
+URL to Azure AI Studio Model Card: https://ai.azure.com/explore/models/Cohere-rerank-v3.5/version/1/registry/azureml-cohere?tid=9de3d9c3-b0bb-4d2e-93ab-f6407a8b3793
+
 **Alternatives**:
 1. Deploy Cohere Rerank v3.5 manually via Azure AI Studio (documented below)
-2. Use Cohere's cloud API directly (provide API key via `cohere_rerank_api_key` variable)
-3. Use Azure OpenAI with an alternative reranking approach (if Cohere is unavailable)
 
-This limitation is documented to maintain transparency. Future Terraform provider updates may enable fully automated Cohere deployments.
+This limitation is documented to maintain transparency. Terraform provider updates may enable fully automated Cohere deployments.
 
 ## Architecture Overview
 
@@ -70,39 +70,8 @@ This limitation is documented to maintain transparency. Future Terraform provide
 8. **Key Vault**
    - Secure storage for:
      - PostgreSQL admin password
-     - Cohere API key
      - External OpenAI API key
    - Accessed by container apps via managed identity
-
-### Data Flow
-
-#### Haystack Search Pipeline
-
-1. **Ingestion**:
-   - Documents posted to Haystack REST API
-   - Stored in PostgreSQL with automatic `tsvector` generation
-   - GIN index maintained for fast FTS queries
-
-2. **Retrieval**:
-   - Query sent to Haystack REST API
-   - PostgreSQL FTS retriever searches using `ts_rank` and `tsquery`
-   - Initial candidates retrieved based on text similarity
-
-3. **Reranking**:
-   - Retrieved documents sent to Cohere Rerank v3.5 via Azure AI Foundry
-   - Reranker provides semantic relevance scores
-   - Top-k documents selected based on reranking scores
-
-4. **Generation** (Optional):
-   - Reranked documents passed to external OpenAI-compatible LLM
-   - LLM generates response based on retrieved context
-   - Response returned via Haystack REST API
-
-#### n8n Workflow Execution
-
-- n8n workflows can orchestrate calls to Haystack API
-- Workflows stored in SQLite database on Azure Files
-- No prescribed workflows - n8n is a blank slate orchestrator
 
 ### PostgreSQL Full Text Search Configuration
 
@@ -160,9 +129,6 @@ external_openai_endpoint = "https://your-openai.openai.azure.com/"
 external_openai_api_key = "your-openai-api-key"
 external_openai_deployment_name = "gpt-4"
 
-# Cohere Rerank API key (if not using managed deployment)
-cohere_rerank_api_key = "your-cohere-api-key"
-
 # Authentication: Either IP whitelisting or Entra ID
 allowed_ip_ranges = ["1.2.3.4/32"]  # Your IP address
 # OR
@@ -214,7 +180,7 @@ key                  = "dev.terraform.tfstate"
      --querytext "@schema.sql"
    ```
 
-5. **Deploy Cohere Rerank v3.5** (optional manual step if not using Cohere cloud API):
+5. **Deploy Cohere Rerank v3.5**:
    
    If Terraform doesn't automatically deploy the Cohere model, you can deploy it manually:
    
@@ -224,18 +190,17 @@ key                  = "dev.terraform.tfstate"
    
    c. Navigate to "Model deployments" or "Models"
    
-   d. Search for "Cohere Rerank v3.5" or "Cohere Rerank"
+   d. Search for "Cohere Rerank v3.5" or follow the [link to the model card](https://ai.azure.com/explore/models/Cohere-rerank-v3.5/version/1/registry/azureml-cohere?tid=9de3d9c3-b0bb-4d2e-93ab-f6407a8b3793) 
    
    e. Deploy the model with the following settings:
-      - Deployment name: `cohere-rerank-v3`
+      - Deployment name: `cohere-rerank-v3.5`
       - Model version: Latest available
       - Region: North Europe (or closest EU region)
    
-   f. Copy the endpoint URL and API key
+   f. Copy the endpoint URL and credentials
    
-   g. Update the `cohere_rerank_api_key` variable or Key Vault secret
-   
-   **Alternative**: Use Cohere's cloud API by providing your Cohere API key in the `cohere_rerank_api_key` variable.
+   g. Update Key Vault secret
+
 
 6. **Access the services**:
    - n8n: `terraform output -raw n8n_fqdn_url`
@@ -295,27 +260,9 @@ Haystack uses Cohere Rerank v3.5 deployed in Azure AI Foundry:
 4. **Usage**: Haystack reranker component calls endpoint with retrieved documents
 5. **Output**: Reranked documents with semantic relevance scores
 
-### Reranking Flow
-
-```
-User Query → Haystack API
-  ↓
-PostgreSQL FTS Retrieval (ts_rank)
-  ↓
-Top 100 candidates
-  ↓
-Cohere Rerank v3.5 API
-  ↓
-Top 10 reranked results
-  ↓
-(Optional) LLM Generation
-  ↓
-Response to User
-```
-
 ## External OpenAI-Compatible Endpoint
 
-Haystack routes LLM generation calls to an external OpenAI-compatible endpoint:
+Haystack routes LLM generation calls to an OpenAI-compatible endpoint in a different, client-owned tenant:
 
 - **Endpoint**: Specified via `external_openai_endpoint` variable
 - **Authentication**: API key via `external_openai_api_key` variable
@@ -432,7 +379,7 @@ Estimated monthly cost (North Europe, development SKUs):
 - Key Vault: ~$1
 - AI Foundry + Cohere: Variable (depends on usage)
 
-**Total**: ~$120-150/month plus Cohere API usage
+**Total**: ~$120-150/month
 
 ## Support and Contributions
 
@@ -444,11 +391,3 @@ This is a minimal reference implementation. For production deployments, consider
 - Monitoring (Application Insights, Log Analytics)
 - Automated backups and disaster recovery
 - Performance SKUs for production workloads
-
-## License
-
-See LICENSE file for details.
-
----
-
-**Architecture Compliance**: This deployment strictly adheres to the minimal component set specified in the requirements. No additional services are provisioned beyond those explicitly mandated.
